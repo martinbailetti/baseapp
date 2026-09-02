@@ -5,9 +5,9 @@ vi.mock('@/utils/apiFetch', () => ({
 }))
 
 import { apiFetch } from '@/utils/apiFetch'
-import { ensureLoaded, subscribe, setPrefs } from '@/utils/keycloakPrefs'
+import { ensureLoaded, subscribe, setPrefs } from '@/utils/userPrefs'
 
-describe('keycloakPrefs', () => {
+describe('userPrefs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()

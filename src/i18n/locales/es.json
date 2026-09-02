@@ -59,14 +59,14 @@
   },
   "auth": {
     "appSubtitle": "Portal de administración",
-    "realm": "Realm",
-    "client": "Client",
-    "url": "URL",
+    "username": "Usuario o email",
+    "password": "Contraseña",
     "noPermissions": "Tu cuenta no tiene los permisos necesarios para acceder. Contacta con el administrador o cierra sesión para usar otra cuenta.",
-    "signIn": "Iniciar sesión con Keycloak",
+    "signIn": "Iniciar sesión",
+    "signingIn": "Entrando...",
     "signOut": "Cerrar sesión",
     "rememberMe": "Recordarme",
-    "forceSignOut": "¿Sesión activa? Cerrar sesión"
+    "invalidCredentials": "Usuario o contraseña incorrectos"
   },
   "profile": {
     "title": "Mi perfil",
@@ -124,7 +124,7 @@
   },
   "users": {
     "title": "Usuarios con Roles",
-    "subtitle": "Usuarios de Keycloak con roles del cliente basekit",
+    "subtitle": "Usuarios de la aplicación con roles asignados",
     "colEmail": "Email",
     "colName": "Nombre",
     "colRoles": "Roles",

@@ -18,7 +18,7 @@ const UsersPage = () => {
       try {
         setLoading(true)
         setError(null)
-        const res = await apiFetch('/api/keycloak-users')
+        const res = await apiFetch('/api/users')
         const data = await res.json()
         if (data.success && Array.isArray(data.data)) {
           setUsers(data.data)
@@ -47,7 +47,7 @@ const UsersPage = () => {
     <PageContainer>
       <PageHeader
         title={t('users.title', 'Usuarios con Roles')}
-        subtitle={t('users.subtitle', 'Usuarios de Keycloak con roles del cliente basekit')}
+        subtitle={t('users.subtitle', 'Usuarios de la aplicación con roles asignados')}
         Icon={Users}
       />
 

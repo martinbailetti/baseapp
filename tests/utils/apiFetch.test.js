@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockSetToken = vi.fn()
 const mockSetUser = vi.fn()
+const mockReset = vi.fn()
 const mockFetch = vi.fn()
 
 vi.mock('@/store/useAuthStore', () => ({
@@ -9,23 +10,26 @@ vi.mock('@/store/useAuthStore', () => ({
     getState: vi.fn(() => ({
       token: 'stored-token',
       isAuthenticated: true,
+      refreshToken: 'stored-refresh',
       setToken: mockSetToken,
       setUser: mockSetUser,
+      reset: mockReset,
     })),
   },
 }))
 
-vi.mock('@/utils/keycloak', () => ({
-  default: {
-    updateToken: vi.fn(),
-    logout: vi.fn(),
-    token: 'refreshed-token',
-    tokenParsed: { sub: 'user-1', name: 'Test' },
-  },
+vi.mock('@/utils/tokenRefresh', () => ({
+  ensureFreshToken: vi.fn().mockResolvedValue(undefined),
+  tryRefreshToken: vi.fn().mockResolvedValue(false),
+}))
+
+vi.mock('@/utils/authSession', () => ({
+  clearRefreshToken: vi.fn(),
 }))
 
 import useAuthStore from '@/store/useAuthStore'
-import keycloak from '@/utils/keycloak'
+import { tryRefreshToken } from '@/utils/tokenRefresh'
+import { clearRefreshToken } from '@/utils/authSession'
 import { apiFetch, apiJson, ApiError } from '@/utils/apiFetch'
 
 describe('ApiError', () => {
@@ -48,12 +52,14 @@ describe('apiFetch', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     global.fetch = mockFetch
-    keycloak.updateToken.mockResolvedValue(false)
+    tryRefreshToken.mockResolvedValue(false)
     useAuthStore.getState.mockReturnValue({
       token: 'stored-token',
       isAuthenticated: true,
+      refreshToken: 'stored-refresh',
       setToken: mockSetToken,
       setUser: mockSetUser,
+      reset: mockReset,
     })
   })
 
@@ -73,6 +79,7 @@ describe('apiFetch', () => {
       isAuthenticated: false,
       setToken: mockSetToken,
       setUser: mockSetUser,
+      reset: mockReset,
     })
     mockFetch.mockResolvedValue({ ok: true })
 
@@ -128,7 +135,7 @@ describe('apiFetch', () => {
   })
 
   it('refresca el token y reintenta ante un 401', async () => {
-    keycloak.updateToken.mockResolvedValue(true)
+    tryRefreshToken.mockResolvedValue(true)
     mockFetch
       .mockResolvedValueOnce({ ok: false, status: 401 })
       .mockResolvedValueOnce({ ok: true, status: 200 })
@@ -136,7 +143,7 @@ describe('apiFetch', () => {
     const res = await apiFetch('/api/movies')
 
     expect(res.status).toBe(200)
-    expect(keycloak.updateToken).toHaveBeenCalled()
+    expect(tryRefreshToken).toHaveBeenCalled()
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })
@@ -145,13 +152,15 @@ describe('apiJson', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     global.fetch = mockFetch
+    tryRefreshToken.mockResolvedValue(false)
     useAuthStore.getState.mockReturnValue({
       token: 'stored-token',
       isAuthenticated: true,
+      refreshToken: 'stored-refresh',
       setToken: mockSetToken,
       setUser: mockSetUser,
+      reset: mockReset,
     })
-    keycloak.updateToken.mockResolvedValue(false)
   })
 
   it('devuelve json.data en respuestas correctas', async () => {
@@ -174,7 +183,7 @@ describe('apiJson', () => {
   })
 
   it('refresca el token y reintenta ante un 401', async () => {
-    keycloak.updateToken.mockResolvedValue(true)
+    tryRefreshToken.mockResolvedValue(true)
     mockFetch
       .mockResolvedValueOnce({
         ok: false,
@@ -189,14 +198,12 @@ describe('apiJson', () => {
 
     await expect(apiJson('/api/movies')).resolves.toEqual(['ok'])
 
-    expect(keycloak.updateToken).toHaveBeenCalledWith(-1)
-    expect(mockSetToken).toHaveBeenCalledWith('refreshed-token')
-    expect(mockSetUser).toHaveBeenCalledWith({ sub: 'user-1', name: 'Test' })
+    expect(tryRefreshToken).toHaveBeenCalled()
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 
   it('cierra sesión si el 401 persiste tras refrescar', async () => {
-    keycloak.updateToken.mockResolvedValue(true)
+    tryRefreshToken.mockResolvedValue(true)
     mockFetch.mockResolvedValue({
       ok: false,
       status: 401,
@@ -208,9 +215,8 @@ describe('apiJson', () => {
       status: 401,
     })
 
-    expect(keycloak.logout).toHaveBeenCalledWith({
-      redirectUri: window.location.origin + '/',
-    })
+    expect(clearRefreshToken).toHaveBeenCalled()
+    expect(mockReset).toHaveBeenCalled()
   })
 
   it('lanza ApiError con mensaje y errores de validación', async () => {

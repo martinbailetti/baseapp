@@ -1,6 +1,6 @@
 # BaseKit — Frontend
 
-Aplicación web React 18 + Vite 5 con autenticación via **Keycloak** y gestión de estado con **Zustand**.
+Aplicación web React 18 + Vite 5 con autenticación via **API** (JWT) y gestión de estado con **Zustand**.
 
 ---
 
@@ -13,7 +13,6 @@ Aplicación web React 18 + Vite 5 con autenticación via **Keycloak** y gestión
 | Vite 5 | Bundler / dev server |
 | Tailwind CSS 3 | Estilos |
 | Zustand | Estado global de auth |
-| keycloak-js | Integración con Keycloak |
 | Vitest + Testing Library | Tests |
 
 ---
@@ -21,7 +20,6 @@ Aplicación web React 18 + Vite 5 con autenticación via **Keycloak** y gestión
 ## Requisitos previos
 
 - Node.js ≥ 18
-- Un servidor Keycloak accesible con el realm y cliente configurados
 - La API PHP corriendo en `http://localhost:8888` durante desarrollo
 
 ---
@@ -41,10 +39,6 @@ El archivo de entorno es `.env.development` (para desarrollo local).
 Existe un `.env.development.example` como plantilla:
 
 ```env
-VITE_KEYCLOAK_URL=https://iam.smi2000.net:8181
-VITE_KEYCLOAK_REALM=SMIApplications
-VITE_KEYCLOAK_CLIENT_ID=basekit
-
 # Roles requeridos separados por coma (vacío = cualquier usuario autenticado)
 VITE_REQUIRED_ROLES=super,admin,viewer
 
@@ -78,7 +72,7 @@ npm run lint         # ESLint sobre src/
 
 ```
 src/
-├── main.jsx              ← entry point: inicializa Keycloak y monta React
+├── main.jsx              ← entry point: restaura sesión API y monta React
 ├── App.jsx               ← rutas principales + ProtectedRoute
 ├── index.css             ← directivas Tailwind + overrides dark mode
 │
@@ -99,7 +93,7 @@ src/
 │   ├── ProfilePage.jsx
 │   ├── DashboardPage.jsx    ← debug/info JWT (sin enlace en nav)
 │   ├── ActivityLogPage.jsx  ← registro de actividad (rol super)
-│   ├── UsersPage.jsx        ← usuarios Keycloak con roles (rol super)
+│   ├── UsersPage.jsx        ← usuarios de la API con roles (rol super)
 │   ├── MoviesPage.jsx       ← CRUD películas (rol super)
 │   ├── ActorsPage.jsx       ← CRUD actores (rol super)
 │   ├── DirectorsPage.jsx    ← CRUD directores (rol super)
@@ -109,10 +103,10 @@ src/
 │   └── useAuthStore.js   ← Zustand: isAuthenticated, isLoading, user, token
 │
 └── utils/
-    ├── apiFetch.js       ← fetch autenticado con JWT de Keycloak
+    ├── apiFetch.js       ← fetch autenticado con JWT de la API
     ├── cn.js             ← helper clsx + twMerge para classNames
-    ├── keycloak.js       ← instancia singleton de Keycloak
-    ├── keycloakPrefs.js  ← preferencias de UI persistidas en BD por clave
+    ├── authSession.js    ← persistencia del refresh token
+    ├── userPrefs.js      ← preferencias de UI persistidas en BD por clave
     └── roleHome.js       ← mapeo rol → ruta home tras login
 
 public/
@@ -130,18 +124,18 @@ tests/
 
 ## Flujo de autenticación
 
-1. `main.jsx` llama a `keycloak.init({ onLoad: 'login-required' })` antes de montar React.
-2. Keycloak redirige al usuario al login si no tiene sesión activa.
-3. Tras autenticar, `useAuthStore` recibe `token` y `user` (tokenParsed).
-4. `App.jsx` lee `isLoading` del store; mientras carga muestra `<LoadingPage />`.
+1. `main.jsx` intenta restaurar la sesión con el refresh token (o tokens QR) antes de montar React.
+2. Si no hay sesión, `ProtectedRoute` redirige a `/login`.
+3. El usuario envía usuario/email y contraseña a `POST /api/auth/login`.
+4. Tras autenticar, `useAuthStore` recibe `token` y `user` (claims del JWT).
 5. `ProtectedRoute` verifica `isAuthenticated` y `hasRequiredRoles` en cada ruta.
-6. `keycloak.onTokenExpired` intenta refrescar el token automáticamente (margen: 60 s).
+6. El access token se refresca automáticamente con `POST /api/auth/refresh`.
 
 ### Roles
 
 Los roles se leen de `VITE_REQUIRED_ROLES` (separados por coma).
 `hasRequiredRoles` es `true` si el usuario tiene **al menos uno** de los roles listados.
-Los roles se buscan en `realm_access.roles` y en `resource_access[clientId].roles`.
+Los roles se buscan en `user.roles` y en `user.realm_access.roles`.
 
 | Rol | Acceso |
 |-----|--------|

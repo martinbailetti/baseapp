@@ -1,5 +1,5 @@
 /**
- * Claves de persistencia de preferencias de tablas (keycloakPrefs).
+ * Claves de persistencia de preferencias de tablas.
  *
  * Centralizadas aquí para evitar colisiones y facilitar migraciones.
  * El sufijo `_vN` permite invalidar prefs antiguas si cambia el formato.
@@ -17,8 +17,10 @@ export const USER_PREFS_KEYS = {
   UI: 'ui_prefs',
 }
 
-/** Claves de localStorage del navegador */
+/** Claves de localStorage / sessionStorage del navegador */
 export const LOCAL_STORAGE_KEYS = {
   DARK_MODE: 'dark_mode',
   LANG: 'lang',
+  REFRESH_TOKEN: 'auth_refresh_token',
+  REMEMBER_ME: 'auth_remember_me',
 }

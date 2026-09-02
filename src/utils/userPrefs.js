@@ -1,12 +1,5 @@
-/**
- * Módulo para persistir preferencias de UI por tabla en Keycloak.
- *
- * Cada storageKey (p.ej. 'planning_v1') se guarda en su PROPIO atributo
- * de usuario en Keycloak, evitando el límite de 2048 chars por atributo.
- * La comunicación va a través de la api (GET/POST /api/user-prefs?key=...).
- */
 import { apiFetch } from '@/utils/apiFetch'
-import { KEYCLOAK_PREFS_SAVE_DEBOUNCE_MS } from '@/config/defaults'
+import { PREFS_SAVE_DEBOUNCE_MS } from '@/config/defaults'
 
 // Cache por key: { loaded, prefs, listeners, saveTimer, loadPromise }
 const _cache = {}
@@ -19,7 +12,7 @@ function getEntry(key) {
 }
 
 /**
- * Carga las prefs de una key concreta desde Keycloak (idempotente por sesión).
+ * Carga las prefs de una key concreta desde la API (idempotente por sesión).
  * @param {string} key  storageKey de la tabla (p.ej. 'planning_v1')
  * @returns {Promise<object>}
  */
@@ -61,7 +54,7 @@ export function subscribe(key, fn) {
 }
 
 /**
- * Actualiza las prefs de una key y programa el guardado (debounced 1.5s).
+ * Actualiza las prefs de una key y programa el guardado (debounced).
  * @param {string} key    storageKey de la tabla
  * @param {object} prefs  Objeto de preferencias a guardar
  */
@@ -69,7 +62,7 @@ export function setPrefs(key, prefs) {
   const entry  = getEntry(key)
   entry.prefs  = prefs
   clearTimeout(entry.saveTimer)
-  entry.saveTimer = setTimeout(() => flush(key), KEYCLOAK_PREFS_SAVE_DEBOUNCE_MS)
+  entry.saveTimer = setTimeout(() => flush(key), PREFS_SAVE_DEBOUNCE_MS)
 }
 
 async function flush(key) {
@@ -84,4 +77,3 @@ async function flush(key) {
     // noop — si falla el guardado la app sigue funcionando con las prefs en memoria
   }
 }
-

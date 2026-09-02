@@ -96,7 +96,7 @@ function QrLoginApp () {
             return
           }
 
-          // Guardar tokens para que main.jsx los use en keycloak.init()
+          // Guardar tokens para que main.jsx restaure la sesión de la API
           try {
             localStorage.setItem('qr_access_token',  accessToken)
             if (refreshToken) localStorage.setItem('qr_refresh_token', refreshToken)

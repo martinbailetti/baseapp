@@ -1,7 +1,7 @@
 import useAuthStore from '@/store/useAuthStore'
-import keycloak from '@/utils/keycloak'
 import { ensureFreshToken, tryRefreshToken } from '@/utils/tokenRefresh'
 import { API_URL, TOKEN_MIN_VALIDITY_SECONDS } from '@/config/defaults'
+import { clearRefreshToken } from '@/utils/authSession'
 
 /**
  * Error tipado para respuestas de la API.
@@ -21,9 +21,14 @@ function hasHeader(headers, name) {
   return Object.keys(headers).some((k) => k.toLowerCase() === name.toLowerCase())
 }
 
+function expireSession() {
+  clearRefreshToken()
+  useAuthStore.getState().reset()
+}
+
 /**
  * Wrapper sobre fetch que añade automáticamente el header Authorization
- * con el JWT de Keycloak almacenado en el store.
+ * con el JWT almacenado en el store.
  *
  * El header `Content-Type: application/json` solo se añade cuando hay body
  * y no es un FormData (para no romper subidas de archivos ni peticiones GET).
@@ -56,7 +61,7 @@ export async function apiFetch(path, options = {}) {
   let res = await makeRequest()
 
   if (res.status === 401) {
-    const refreshed = await tryRefreshToken(-1)
+    const refreshed = await tryRefreshToken()
     if (refreshed) {
       res = await makeRequest()
     }
@@ -87,11 +92,7 @@ export async function apiJson(path, options = {}) {
   }
 
   if (res.status === 401) {
-    try {
-      keycloak.logout({ redirectUri: window.location.origin + '/' })
-    } catch {
-      /* noop */
-    }
+    expireSession()
     throw new ApiError('Sesión expirada', { status: 401 })
   }
 

@@ -15,7 +15,7 @@ describe('App routes', () => {
     })
   })
 
-  it('muestra LoadingPage mientras Keycloak inicializa', () => {
+  it('muestra LoadingPage mientras se restaura la sesión', () => {
     renderApp('/', { isLoading: true })
     expect(screen.getByText('Iniciando sesión...')).toBeInTheDocument()
   })
@@ -32,7 +32,7 @@ describe('App routes', () => {
       hasRole: () => false,
     })
     expect(await screen.findByText('Portal de administración')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Iniciar sesión con Keycloak/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Iniciar sesión/i })).toBeInTheDocument()
   })
 
   it('redirige /login a /home si el usuario ya está autenticado', async () => {

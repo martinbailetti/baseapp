@@ -5,9 +5,9 @@ import './index.css'
 import App from './App'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import LoadingPage from '@/pages/LoadingPage'
-import keycloak from '@/utils/keycloak'
 import useAuthStore from '@/store/useAuthStore'
-import { setupTokenRefresh } from '@/utils/tokenRefresh'
+import { applySession, setupTokenRefresh, tryRefreshToken } from '@/utils/tokenRefresh'
+import { clearRefreshToken, decodeJwtPayload, getRefreshToken, isRememberMe, takeQrTokens } from '@/utils/authSession'
 
 // ── Service Worker ─────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator && import.meta.env.DEV) {
@@ -36,48 +36,54 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   })
 }
 
-// ── Inicialización de Keycloak ─────────────────────────────────────────────
-const { setAuthenticated, setUser, setToken, setLoading, setError, reset } =
+const { setAuthenticated, setUser, setToken, setRefreshToken, setLoading, setError, reset } =
   useAuthStore.getState()
 
-// Comprobar si hay tokens provenientes de un login por QR
-const _qrTokens = (() => {
-  try {
-    const a = localStorage.getItem('qr_access_token')
-    const r = localStorage.getItem('qr_refresh_token')
-    if (a) {
-      localStorage.removeItem('qr_access_token')
-      localStorage.removeItem('qr_refresh_token')
-    }
-    return a ? { token: a, refreshToken: r || undefined } : null
-  } catch { return null }
-})()
+const endSession = () => {
+  clearRefreshToken()
+  reset()
+}
 
-keycloak
-  .init({
-    onLoad: _qrTokens ? 'check-sso' : 'login-required',
-    checkLoginIframe: false,
-    pkceMethod: 'S256',
-    enableLogging: true, // Debug: ver logs de keycloak-js en consola
-    ...(_qrTokens ?? {}),
-  })
-  .then((authenticated) => {
-    if (authenticated) {
-      setAuthenticated(true)
-      setToken(keycloak.token ?? null)
-      setUser(keycloak.tokenParsed ?? null)
+async function restoreSession() {
+  const qrTokens = takeQrTokens()
+  if (qrTokens?.token) {
+    applySession({
+      access_token: qrTokens.token,
+      refresh_token: qrTokens.refreshToken,
+      user: decodeJwtPayload(qrTokens.token),
+    }, true)
+    setupTokenRefresh({ onRefreshFailed: endSession })
+    setLoading(false)
+    return
+  }
 
-      setupTokenRefresh({ onRefreshFailed: reset })
-    } else {
-      setAuthenticated(false)
+  const storedRefresh = getRefreshToken()
+  if (storedRefresh) {
+    setRefreshToken(storedRefresh)
+    const restored = await tryRefreshToken()
+    if (restored) {
+      setupTokenRefresh({ onRefreshFailed: endSession })
+      setLoading(false)
+      return
     }
-    setLoading(false)
-  })
-  .catch((err) => {
-    console.error('Keycloak init error', err)
-    setError('No se pudo conectar con el servidor de autenticación.')
-    setLoading(false)
-  })
+    clearRefreshToken()
+    setAuthenticated(false)
+    setToken(null)
+    setUser(null)
+    setRefreshToken(null)
+  } else {
+    setAuthenticated(false)
+  }
+
+  setError(null)
+  setLoading(false)
+}
+
+restoreSession().catch((err) => {
+  console.error('Auth restore error', err)
+  setError('No se pudo restaurar la sesión.')
+  setLoading(false)
+})
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 

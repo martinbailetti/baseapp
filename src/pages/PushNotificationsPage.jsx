@@ -72,7 +72,7 @@ const PushNotificationsPage = () => {
         setLoadingUsers(true)
         setUsersError('')
 
-        const res = await apiFetch('/api/keycloak-users')
+        const res = await apiFetch('/api/users')
         const json = await res.json()
 
         if (!res.ok || !json?.success || !Array.isArray(json?.data)) {

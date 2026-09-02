@@ -40,14 +40,14 @@ Todo el flujo de auth ya existe y está encapsulado:
 |----------|--------------------|
 | Saber si el usuario está autenticado | `useAuth().isAuthenticated` |
 | Login / logout | `useAuth().login()` / `useAuth().logout()` |
-| Token JWT | `useAuth().token` o `keycloak.token` |
+| Token JWT | `useAuth().token` |
 | Verificar un rol | `useAuth().hasRole('nombre-rol')` |
 | Verificar roles requeridos globales | `useAuth().hasRequiredRoles` |
-| Datos del usuario (claims) | `useAuth().user` (= `keycloak.tokenParsed`) |
+| Datos del usuario (claims) | `useAuth().user` |
 
-### No llamar a `keycloak.init()` en ningún otro lugar
+### Restaurar sesión
 
-Solo se llama una vez en `main.jsx`. Hacerlo de nuevo rompe la sesión.
+`main.jsx` restaura la sesión con el refresh token (o tokens QR) una sola vez. No volver a implementar ese arranque.
 
 ### Proteger rutas nuevas
 
@@ -80,8 +80,7 @@ const json = await res.json()
 La API verifica el token en servidor (`api/src/Services/JwtService.php`). Las mutaciones
 `POST/PUT/DELETE` requieren JWT válido; sin token responderá `401`.
 
-El token se refresca automáticamente en `main.jsx` (`onTokenExpired`). No manejar
-el refresh manualmente ni guardar el JWT en `localStorage`.
+El access token se refresca automáticamente (`setupTokenRefresh` + `ensureFreshToken`). El refresh token se guarda en `localStorage` (recordarme) o `sessionStorage`.
 
 ---
 
@@ -89,9 +88,6 @@ el refresh manualmente ni guardar el JWT en `localStorage`.
 
 | Variable | Descripción |
 |----------|-------------|
-| `VITE_KEYCLOAK_URL` | URL base del servidor Keycloak |
-| `VITE_KEYCLOAK_REALM` | Nombre del realm |
-| `VITE_KEYCLOAK_CLIENT_ID` | Client ID del cliente Keycloak |
 | `VITE_REQUIRED_ROLES` | Roles requeridos separados por coma |
 
 Archivo activo en desarrollo: `.env.development`.  
@@ -159,4 +155,4 @@ npm run lint         # ESLint
 - No modificar `public/sw.js` manualmente → se versiona con `scripts/stamp-sw.js` durante el build.
 - No agregar librerías de UI pesadas (MUI, Ant Design, etc.); el proyecto usa Tailwind + componentes propios.
 - No usar `any` ni suprimir errores de lint sin justificación en comentario.
-- No guardar el token JWT en `localStorage` manualmente; Keycloak lo gestiona en memoria.
+- No guardar el access token JWT en `localStorage`; solo el refresh token (y solo si el usuario marcó “recordarme”).

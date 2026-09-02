@@ -105,44 +105,16 @@ const HomePage = () => {
         )}
       </div>
 
-      {/* Conexión con Keycloak */}
+      {/* Autenticación por API */}
       <div className="rounded-xl border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-6">
         <div className="flex items-center gap-2 mb-3">
           <KeyRound className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-300">Conexi&#243;n con Keycloak</h2>
+          <h2 className="text-lg font-semibold text-emerald-800 dark:text-emerald-300">Login por API</h2>
         </div>
-        <p className="text-sm text-emerald-800 dark:text-emerald-200 mb-4">
-          Manuales para crear los clientes necesarios en Keycloak.
+        <p className="text-sm text-emerald-800 dark:text-emerald-200">
+          Ejecutar <code className="font-mono text-xs bg-emerald-100 dark:bg-emerald-900/50 px-1 rounded">database/002_auth_tables.sql</code> en MariaDB.
+          Usuario inicial: <strong>admin / password</strong>. Configurar <code className="font-mono text-xs bg-emerald-100 dark:bg-emerald-900/50 px-1 rounded">JWT_SECRET</code> en el .env de la API.
         </p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="/tutorials/DEV%20-%20Creaci%C3%B3n%20de%20Cliente%20de%20API%20Keycloak.pdf"
-            download
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-medium transition-colors"
-            title="Cliente Keycloak para login en desarrollo"
-          >
-            <Download className="h-4 w-4" />
-            Cliente Keycloak para login en desarrollo <span className="ml-1 rounded-full bg-emerald-800/40 text-emerald-200 px-2 py-0.5 text-xs font-normal">DEV</span>
-          </a>
-          <a
-            href="/tutorials/Creaci%C3%B3n%20de%20Cliente%20Keycloak%20para%20login%20de%20aplicaciones.pdf"
-            download
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-medium transition-colors"
-            title="Creacion de Cliente Keycloak para autenticacion (Obligatorio)"
-          >
-            <Download className="h-4 w-4" />
-            Cliente Keycloak para login <span className="ml-1 rounded-full bg-emerald-800/40 text-emerald-200 px-2 py-0.5 text-xs font-normal">Obligatorio</span>
-          </a>
-          <a
-            href="/tutorials/Creaci%C3%B3n%20de%20Cliente%20de%20API%20Keycloak.pdf"
-            download
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-medium transition-colors"
-            title="Creacion de Cliente de API Keycloak (Opcional) — para acceder a la API de Keycloak desde la app"
-          >
-            <Download className="h-4 w-4" />
-            Cliente de API Keycloak <span className="ml-1 rounded-full bg-emerald-800/40 text-emerald-200 px-2 py-0.5 text-xs font-normal">Opcional</span>
-          </a>
-        </div>
       </div>
 
       {svnUrl && (
@@ -160,46 +132,28 @@ const HomePage = () => {
         </Section>
       )}
 
-      <Section icon={KeyRound} title="Autenticacion — Keycloak">
+      <Section icon={KeyRound} title="Autenticacion — API">
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-slate-300">
-            La autenticacion esta basada en{' '}
-            <strong className="text-gray-800 dark:text-slate-200">Keycloak 26.5.6</strong>.
-            Para desarrollo hay un servidor Keycloak disponible en{' '}
-            <strong className="text-gray-800 dark:text-slate-200">http://192.168.13.162:8080/</strong>.
-            Si prefieres usar una instancia propia, instala y configura Keycloak antes de arrancar la aplicacion.
+            El login se hace contra la API PHP (<code className="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1 rounded">POST /api/auth/login</code>).
+            Los usuarios y roles viven en MariaDB. El script{' '}
+            <code className="font-mono text-xs bg-gray-100 dark:bg-slate-700 px-1 rounded">api/database/002_auth_tables.sql</code>{' '}
+            crea las tablas y un usuario inicial <strong className="text-gray-800 dark:text-slate-200">admin / password</strong>.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-lg border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-3 space-y-1">
-              <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wide">Version requerida</p>
-              <p className="font-mono text-sm font-semibold text-gray-800 dark:text-slate-200">26.5.6</p>
+              <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wide">Access token</p>
+              <p className="font-mono text-sm font-semibold text-gray-800 dark:text-slate-200">JWT HS256 · 15 min</p>
             </div>
             <div className="rounded-lg border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-4 py-3 space-y-1">
-              <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wide">Runtime</p>
-              <p className="font-mono text-sm font-semibold text-gray-800 dark:text-slate-200">Quarkus (JVM / Java)</p>
+              <p className="text-xs font-medium text-gray-400 dark:text-slate-500 uppercase tracking-wide">Refresh token</p>
+              <p className="font-mono text-sm font-semibold text-gray-800 dark:text-slate-200">7 días / 30 si “recordarme”</p>
             </div>
           </div>
-          <div>
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Descarga</p>
-            <a
-              href="https://www.keycloak.org/downloads-archive"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-              <ExternalLink className="h-4 w-4" />
-              keycloak.org/downloads-archive
-            </a>
-            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-              Buscar la version <code className="font-mono bg-gray-100 dark:bg-slate-700 px-1 rounded">26.5.6</code> en el listado de versiones anteriores.
-            </p>
-          </div>
           <div className="rounded-lg border border-blue-100 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
-            El realm, cliente y roles de Keycloak deben coincidir con las variables{' '}
-            <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">VITE_KEYCLOAK_*</code>{' '}
-            del <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">.env</code> de la webapp
-            y las variables <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">KEYCLOAK_*</code>{' '}
-            del <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">.env</code> de la API.
+            Configurar <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">JWT_SECRET</code>{' '}
+            en el <code className="font-mono text-xs bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded">.env</code> de la API.
+            Cambiar la contraseña del usuario admin en producción.
           </div>
         </div>
       </Section>
@@ -247,9 +201,9 @@ const HomePage = () => {
                 ['Vite 5',         'Bundler y dev server'],
                 ['Tailwind CSS 3', 'Utility-first CSS'],
                 ['React Router v6','Enrutamiento SPA'],
-                ['Zustand',        'Estado global'],
+                ['Zustand',        'Estado global y sesión'],
                 ['i18next',        'Internacionalizacion'],
-                ['keycloak-js',    'Autenticacion SSO'],
+                ['JWT HS256',      'Login por API'],
                 ['lucide-react',   'Iconos SVG'],
               ].map(([name, desc]) => (
                 <div key={name} className="rounded-lg border border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 px-3 py-2">

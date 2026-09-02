@@ -49,7 +49,7 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Acceso denegado')).toBeInTheDocument()
   })
 
-  it('muestra el spinner mientras Keycloak inicializa', () => {
+  it('muestra el spinner mientras se carga la autenticación', () => {
     useAuth.mockReturnValue({ isAuthenticated: false, isLoading: true, hasRequiredRoles: false })
     renderRoute()
     expect(screen.getByRole('status', { name: 'Cargando' })).toBeInTheDocument()

@@ -59,14 +59,14 @@
   },
   "auth": {
     "appSubtitle": "Administration portal",
-    "realm": "Realm",
-    "client": "Client",
-    "url": "URL",
+    "username": "Username or email",
+    "password": "Password",
     "noPermissions": "Your account does not have the required permissions to access. Contact the administrator or sign out to use another account.",
-    "signIn": "Sign in with Keycloak",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
     "signOut": "Sign out",
     "rememberMe": "Remember me",
-    "forceSignOut": "Active session? Sign out"
+    "invalidCredentials": "Incorrect username or password"
   },
   "profile": {
     "title": "My profile",
@@ -124,7 +124,7 @@
   },
   "users": {
     "title": "Users with Roles",
-    "subtitle": "Keycloak users with basekit client roles",
+    "subtitle": "Application users with assigned roles",
     "colEmail": "Email",
     "colName": "Name",
     "colRoles": "Roles",

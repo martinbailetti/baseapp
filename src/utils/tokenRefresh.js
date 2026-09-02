@@ -1,28 +1,49 @@
-import keycloak from '@/utils/keycloak'
 import useAuthStore from '@/store/useAuthStore'
+import { API_URL, TOKEN_MIN_VALIDITY_SECONDS, TOKEN_REFRESH_INTERVAL_MS } from '@/config/defaults'
 import {
-  TOKEN_REFRESH_INTERVAL_MS,
-  TOKEN_MIN_VALIDITY_SECONDS,
-} from '@/config/defaults'
+  getRefreshToken,
+  setRefreshToken as persistRefreshToken,
+  isRememberMe,
+  decodeJwtPayload,
+  tokenExpiresSoon,
+} from '@/utils/authSession'
 
-export function syncTokenToStore() {
-  const { setToken, setUser } = useAuthStore.getState()
-  setToken(keycloak.token ?? null)
-  setUser(keycloak.tokenParsed ?? null)
+export function applySession(data, rememberMe) {
+  const { setAuthenticated, setToken, setUser, setRefreshToken, setError } = useAuthStore.getState()
+  const accessToken = data?.access_token || null
+  const refreshToken = data?.refresh_token || null
+  const user = data?.user || decodeJwtPayload(accessToken)
+
+  setToken(accessToken)
+  setUser(user)
+  if (refreshToken) {
+    setRefreshToken(refreshToken)
+    persistRefreshToken(refreshToken, rememberMe ?? isRememberMe())
+  }
+  setAuthenticated(Boolean(accessToken))
+  setError(null)
 }
 
 /**
- * Intenta renovar el token de Keycloak y sincroniza el store.
- * @param {number} minValidity Segundos de validez mínima restante (-1 = forzar si expiró).
- * @returns {Promise<boolean>} true si se obtuvo un token nuevo.
+ * Renueva el access token con el refresh token almacenado.
+ * @returns {Promise<boolean>}
  */
-export async function tryRefreshToken(minValidity = -1) {
+export async function tryRefreshToken() {
+  const refreshToken = useAuthStore.getState().refreshToken || getRefreshToken()
+  if (!refreshToken) return false
+
   try {
-    const refreshed = await keycloak.updateToken(minValidity)
-    if (refreshed) {
-      syncTokenToStore()
+    const res = await fetch(`${API_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.success || !json?.data?.access_token) {
+      return false
     }
-    return refreshed
+    applySession(json.data)
+    return true
   } catch {
     return false
   }
@@ -32,27 +53,35 @@ export async function tryRefreshToken(minValidity = -1) {
  * Renueva el token si está a punto de expirar, antes de una petición API.
  */
 export async function ensureFreshToken(minValidity = TOKEN_MIN_VALIDITY_SECONDS) {
-  if (!useAuthStore.getState().isAuthenticated) return
-  await tryRefreshToken(minValidity)
+  const token = useAuthStore.getState().token
+  const hasRefresh = Boolean(useAuthStore.getState().refreshToken || getRefreshToken())
+  if (!token && !hasRefresh) return
+  if (!token || tokenExpiresSoon(token, minValidity)) {
+    if (!hasRefresh) return
+    await tryRefreshToken()
+  }
 }
+
+let stopTokenRefresh = null
 
 /**
  * Mantiene la sesión activa aunque la pestaña quede inactiva mucho tiempo.
- * Los navegadores ralentizan setTimeout en pestañas en segundo plano, por lo que
- * onTokenExpired de Keycloak puede no dispararse a tiempo.
  */
 export function setupTokenRefresh({ onRefreshFailed } = {}) {
-  const refresh = () =>
-    keycloak
-      .updateToken(TOKEN_MIN_VALIDITY_SECONDS)
-      .then((refreshed) => {
-        if (refreshed) syncTokenToStore()
-      })
-      .catch(() => {
-        if (onRefreshFailed) onRefreshFailed()
-      })
+  if (stopTokenRefresh) {
+    stopTokenRefresh()
+    stopTokenRefresh = null
+  }
 
-  keycloak.onTokenExpired = refresh
+  const refresh = () => {
+    const hadRefresh = Boolean(useAuthStore.getState().refreshToken || getRefreshToken())
+    if (!hadRefresh) return Promise.resolve()
+    return tryRefreshToken().then((ok) => {
+      if (!ok && onRefreshFailed) {
+        onRefreshFailed()
+      }
+    })
+  }
 
   const intervalId = setInterval(refresh, TOKEN_REFRESH_INTERVAL_MS)
 
@@ -63,8 +92,10 @@ export function setupTokenRefresh({ onRefreshFailed } = {}) {
   }
   document.addEventListener('visibilitychange', onVisibilityChange)
 
-  return () => {
+  stopTokenRefresh = () => {
     clearInterval(intervalId)
     document.removeEventListener('visibilitychange', onVisibilityChange)
   }
+
+  return stopTokenRefresh
 }

@@ -7,7 +7,7 @@ describe('generateHomeMarkdown', () => {
     const md = generateHomeMarkdown()
 
     expect(md).toContain('# BaseKit')
-    expect(md).toContain('## Autenticación — Keycloak')
+    expect(md).toContain('## Autenticación — API')
     expect(md).toContain('## Entorno de desarrollo')
     expect(md).toContain('## Frontend — Estilos y recursos')
     expect(md).toContain('## Base de datos')

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Search, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { apiFetch } from '@/utils/apiFetch'
-import * as keycloakPrefs from '@/utils/keycloakPrefs'
+import * as userPrefs from '@/utils/userPrefs'
 import { cn } from '@/utils/cn'
 import { ACTIVITY_LOG_PER_PAGE_OPTIONS, ACTIVITY_LOG_COLUMNS_KEYS } from '@/config/pageConfigs'
 import { STORAGE_KEYS } from '@/config/storageKeys'
@@ -71,7 +71,7 @@ const ActivityLogPage = () => {
 
   useEffect(() => {
     const fallback = setTimeout(() => setPrefsReady(true), PREFS_LOAD_FALLBACK_MS)
-    const unsub = keycloakPrefs.subscribe(STORAGE_KEY, (p) => {
+    const unsub = userPrefs.subscribe(STORAGE_KEY, (p) => {
       if (prefsApplied.current) return
       setPerPage(p.perPage || DEFAULT_PER_PAGE)
       if (p.sortBy)  setSortBy(p.sortBy)
@@ -91,13 +91,13 @@ const ActivityLogPage = () => {
       clearTimeout(fallback)
       setPrefsReady(true)
     })
-    keycloakPrefs.ensureLoaded(STORAGE_KEY)
+    userPrefs.ensureLoaded(STORAGE_KEY)
     return () => { unsub(); clearTimeout(fallback) }
   }, [])
 
   useEffect(() => {
     if (!prefsReady) return
-    keycloakPrefs.setPrefs(STORAGE_KEY, {
+    userPrefs.setPrefs(STORAGE_KEY, {
       perPage,
       sortBy,
       sortDir,

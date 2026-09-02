@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import keycloak from '@/utils/keycloak'
+import useAuthStore from '@/store/useAuthStore'
 import { APP_NAME } from '@/utils/appConfig'
 import { API_URL } from '@/config/defaults'
+import { tryRefreshToken } from '@/utils/tokenRefresh'
 
 export default function QrConfirmPage () {
   const { t } = useTranslation()
@@ -28,11 +29,10 @@ export default function QrConfirmPage () {
     setErrorMsg(null)
 
     try {
-      // Refrescar el token antes de enviarlo para asegurarnos que está vigente
-      try { await keycloak.updateToken(30) } catch { /* noop si falla */ }
+      await tryRefreshToken()
 
-      const accessToken  = keycloak.token         ?? null
-      const refreshToken = keycloak.refreshToken   ?? null
+      const accessToken  = useAuthStore.getState().token         ?? null
+      const refreshToken = useAuthStore.getState().refreshToken   ?? null
 
       if (!accessToken) {
         throw new Error(t('qr.confirmNoSession'))

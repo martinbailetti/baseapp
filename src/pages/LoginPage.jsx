@@ -2,28 +2,32 @@ import { useState } from 'react'
 import { LogIn, LogOut, ShieldAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
-import keycloak from '@/utils/keycloak'
 import { APP_NAME } from '@/utils/appConfig'
 import Button from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 
 const LoginPage = () => {
   const { t } = useTranslation()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem('kc_remember_me') === 'true'
+    () => localStorage.getItem('auth_remember_me') === 'true'
   )
-  const { login, logout, isLoading, isAuthenticated, hasRequiredRoles } = useAuth()
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
+  const { login, logout, isAuthenticated, hasRequiredRoles } = useAuth()
 
-  const handleLogin = () => login(rememberMe)
-
-  // Cierra sesión independientemente del estado del store:
-  // cubre el caso en que check-sso falla (iframe bloqueado) y
-  // isAuthenticated queda false aunque la sesión exista en Keycloak.
-  const handleForceLogout = () => {
-    localStorage.removeItem('kc_remember_me')
-    localStorage.removeItem('kc_tokens')
-    sessionStorage.removeItem('kc_session_active')
-    keycloak.logout({ redirectUri: window.location.origin + '/login' })
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setFormError('')
+    setSubmitting(true)
+    try {
+      await login(username, password, rememberMe)
+    } catch (err) {
+      setFormError(err?.message || t('auth.invalidCredentials'))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -39,22 +43,6 @@ const LoginPage = () => {
           </div>
         </CardHeader>
         <CardBody className="flex flex-col gap-5">
-          <div className="rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-500 space-y-1">
-            <p>
-              <span className="font-medium">{t('auth.realm')}:</span>{' '}
-              {import.meta.env.VITE_KEYCLOAK_REALM || '—'}
-            </p>
-            <p>
-              <span className="font-medium">{t('auth.client')}:</span>{' '}
-              {import.meta.env.VITE_KEYCLOAK_CLIENT_ID || '—'}
-            </p>
-            <p>
-              <span className="font-medium">{t('auth.url')}:</span>{' '}
-              {import.meta.env.VITE_KEYCLOAK_URL || '—'}
-            </p>
-          </div>
-
-          {/* Aviso si el store detectó sesión pero sin los roles necesarios */}
           {isAuthenticated && !hasRequiredRoles && (
             <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-700">
               <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
@@ -70,7 +58,39 @@ const LoginPage = () => {
               {t('auth.signOut')}
             </Button>
           ) : (
-            <>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {formError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                  {formError}
+                </div>
+              )}
+
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-gray-700">{t('auth.username')}</span>
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  required
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-gray-700">{t('auth.password')}</span>
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  required
+                />
+              </label>
+
               <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   id="remember-me"
@@ -83,21 +103,11 @@ const LoginPage = () => {
                 <span className="text-sm text-gray-600">{t('auth.rememberMe')}</span>
               </label>
 
-              <Button onClick={handleLogin} disabled={isLoading} className="w-full gap-2">
+              <Button type="submit" disabled={submitting} className="w-full gap-2">
                 <LogIn className="h-4 w-4" />
-                {t('auth.signIn')}
+                {submitting ? t('auth.signingIn') : t('auth.signIn')}
               </Button>
-
-              {/* Escape para sesiones parciales no detectadas por check-sso */}
-              <button
-                type="button"
-                onClick={handleForceLogout}
-                className="flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mx-auto"
-              >
-                <LogOut className="h-3 w-3" />
-                {t('auth.forceSignOut')}
-              </button>
-            </>
+            </form>
           )}
         </CardBody>
       </Card>

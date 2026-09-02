@@ -59,14 +59,14 @@
   },
   "auth": {
     "appSubtitle": "Portal d'administració",
-    "realm": "Realm",
-    "client": "Client",
-    "url": "URL",
+    "username": "Usuari o email",
+    "password": "Contrasenya",
     "noPermissions": "El teu compte no té els permisos necessaris per accedir. Contacta amb l'administrador o tanca la sessió per usar un altre compte.",
-    "signIn": "Inicia sessió amb Keycloak",
+    "signIn": "Inicia sessió",
+    "signingIn": "Entrant...",
     "signOut": "Tanca sessió",
     "rememberMe": "Recorda'm",
-    "forceSignOut": "Sessió activa? Tanca sessió"
+    "invalidCredentials": "Usuari o contrasenya incorrectes"
   },
   "profile": {
     "title": "El meu perfil",
@@ -129,7 +129,7 @@
   },
   "users": {
     "title": "Usuaris amb Rols",
-    "subtitle": "Usuaris de Keycloak amb rols del client basekit",
+    "subtitle": "Usuaris de l'aplicació amb rols assignats",
     "colEmail": "Email",
     "colName": "Nom",
     "colRoles": "Rols",

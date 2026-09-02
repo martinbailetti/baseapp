@@ -1,42 +1,46 @@
 import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock keycloak — debe ir antes del import del hook
-vi.mock('@/utils/keycloak', () => ({
-  default: {
-    login: vi.fn(),
-    logout: vi.fn(),
-    hasRealmRole: vi.fn(() => false),
-    hasResourceRole: vi.fn(() => false),
-    tokenParsed: { sub: 'abc', name: 'Test User' },
-    token: 'mock-token',
-  },
-}))
+const mockReset = vi.fn()
+const mockFetch = vi.fn()
 
-// Mock store con estado inicial de sesión activa
 vi.mock('@/store/useAuthStore', () => {
   const state = {
     isAuthenticated: true,
     isLoading: false,
-    user: { name: 'Test User', email: 'test@example.com' },
+    user: {
+      name: 'Test User',
+      email: 'test@example.com',
+      roles: ['admin'],
+      realm_access: { roles: ['admin'] },
+    },
     token: 'mock-token',
     error: null,
-    hasRequiredRoles: true,
+    reset: (...args) => mockReset(...args),
   }
-  return {
-    default: (selector) => selector(state),
-  }
+  const store = (selector) => selector(state)
+  store.getState = () => state
+  return { default: store }
 })
 
+vi.mock('@/utils/tokenRefresh', () => ({
+  applySession: vi.fn(),
+  setupTokenRefresh: vi.fn(),
+}))
+
+vi.mock('@/utils/authSession', () => ({
+  clearRefreshToken: vi.fn(),
+  getRefreshToken: vi.fn(() => 'stored-refresh'),
+}))
+
 import { useAuth } from '@/hooks/useAuth'
-import keycloak from '@/utils/keycloak'
+import { applySession } from '@/utils/tokenRefresh'
+import { clearRefreshToken } from '@/utils/authSession'
 
 describe('useAuth', () => {
   beforeEach(() => {
-    localStorage.clear()
     vi.clearAllMocks()
-    keycloak.hasRealmRole.mockReturnValue(false)
-    keycloak.hasResourceRole.mockReturnValue(false)
+    global.fetch = mockFetch
   })
 
   it('devuelve el estado del store', () => {
@@ -47,49 +51,49 @@ describe('useAuth', () => {
     expect(result.current.token).toBe('mock-token')
   })
 
-  it('login llama keycloak.login con scope openid cuando rememberMe=false', () => {
+  it('login llama a la API y aplica la sesión', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { access_token: 'a', refresh_token: 'r', user: { sub: '1' } },
+      }),
+    })
+
     const { result } = renderHook(() => useAuth())
-    act(() => result.current.login(false))
-    expect(keycloak.login).toHaveBeenCalledWith(
-      expect.objectContaining({ scope: 'openid' })
-    )
-    expect(localStorage.getItem('kc_remember_me')).toBe('false')
+    await act(async () => {
+      await result.current.login('admin', 'password', true)
+    })
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
+      method: 'POST',
+    }))
+    expect(applySession).toHaveBeenCalled()
   })
 
-  it('login llama keycloak.login con offline_access cuando rememberMe=true', () => {
+  it('logout llama a la API y limpia la sesión', async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ success: true }) })
+
     const { result } = renderHook(() => useAuth())
-    act(() => result.current.login(true))
-    expect(keycloak.login).toHaveBeenCalledWith(
-      expect.objectContaining({ scope: 'openid offline_access' })
-    )
-    expect(localStorage.getItem('kc_remember_me')).toBe('true')
+    await act(async () => {
+      await result.current.logout()
+    })
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({
+      method: 'POST',
+    }))
+    expect(clearRefreshToken).toHaveBeenCalled()
+    expect(mockReset).toHaveBeenCalled()
   })
 
-  it('logout llama keycloak.logout y limpia el storage', () => {
-    localStorage.setItem('kc_remember_me', 'true')
-    localStorage.setItem('kc_tokens', 'abc')
-    const { result } = renderHook(() => useAuth())
-    act(() => result.current.logout())
-    expect(keycloak.logout).toHaveBeenCalled()
-    expect(localStorage.getItem('kc_remember_me')).toBeNull()
-    expect(localStorage.getItem('kc_tokens')).toBeNull()
-  })
-
-  it('hasRole delega en keycloak.hasRealmRole', () => {
-    keycloak.hasRealmRole.mockReturnValue(true)
+  it('hasRole usa los roles del usuario', () => {
     const { result } = renderHook(() => useAuth())
     expect(result.current.hasRole('admin')).toBe(true)
+    expect(result.current.hasRole('super')).toBe(false)
   })
 
-  it('hasRole delega en keycloak.hasResourceRole si hasRealmRole es false', () => {
-    keycloak.hasRealmRole.mockReturnValue(false)
-    keycloak.hasResourceRole.mockReturnValue(true)
+  it('getTokenParsed retorna el usuario del store', () => {
     const { result } = renderHook(() => useAuth())
-    expect(result.current.hasRole('app-user')).toBe(true)
-  })
-
-  it('getTokenParsed retorna keycloak.tokenParsed', () => {
-    const { result } = renderHook(() => useAuth())
-    expect(result.current.getTokenParsed()).toEqual({ sub: 'abc', name: 'Test User' })
+    expect(result.current.getTokenParsed().email).toBe('test@example.com')
   })
 })

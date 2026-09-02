@@ -27,16 +27,6 @@ vi.mock('@/hooks/useLanguage', () => ({
   useLanguage: vi.fn(() => ({ lang: 'es', changeLanguage: vi.fn() })),
 }))
 
-vi.mock('@/utils/keycloak', () => ({
-  default: {
-    login: vi.fn(),
-    logout: vi.fn(),
-    updateToken: vi.fn().mockResolvedValue(true),
-    token: 'mock-token',
-    refreshToken: 'mock-refresh',
-  },
-}))
-
 vi.mock('@/utils/apiFetch', () => ({
   apiFetch: vi.fn(),
   apiJson: vi.fn(),
@@ -81,7 +71,7 @@ export function setupApiFetchMock() {
       }
     }
 
-    if (path === '/api/keycloak-users') {
+    if (path === '/api/users') {
       return { ok: true, json: async () => ({ success: true, data: [] }) }
     }
 

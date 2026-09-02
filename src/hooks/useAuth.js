@@ -1,13 +1,21 @@
 import { useCallback } from 'react'
-import keycloak from '@/utils/keycloak'
 import useAuthStore from '@/store/useAuthStore'
+import { API_URL } from '@/config/defaults'
+import { applySession, setupTokenRefresh } from '@/utils/tokenRefresh'
+import { clearRefreshToken, getRefreshToken } from '@/utils/authSession'
 
 const REQUIRED_ROLES = import.meta.env.VITE_REQUIRED_ROLES
   ? import.meta.env.VITE_REQUIRED_ROLES.split(',').map((r) => r.trim()).filter(Boolean)
   : []
 
+function rolesFromUser(user) {
+  if (!user) return []
+  if (Array.isArray(user.roles)) return user.roles
+  return user.realm_access?.roles ?? []
+}
+
 /**
- * Hook principal de autenticación con Keycloak.
+ * Hook principal de autenticación contra la API.
  */
 export function useAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -17,42 +25,59 @@ export function useAuth() {
   const error = useAuthStore((state) => state.error)
 
   const hasRole = useCallback(
-    (role) => {
-      if (typeof keycloak.hasRealmRole === 'function' && keycloak.hasRealmRole(role)) {
-        return true
-      }
-      if (typeof keycloak.hasResourceRole === 'function' && keycloak.hasResourceRole(role, keycloak.clientId)) {
-        return true
-      }
-      if (!keycloak.tokenParsed) return false
-      const realmRoles = keycloak.tokenParsed.realm_access?.roles ?? []
-      const clientRoles =
-        keycloak.tokenParsed.resource_access?.[keycloak.clientId]?.roles ?? []
-      return realmRoles.includes(role) || clientRoles.includes(role)
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [token]
+    (role) => rolesFromUser(user).includes(role),
+    [user]
   )
 
   const hasRequiredRoles =
     REQUIRED_ROLES.length === 0 || REQUIRED_ROLES.some((role) => hasRole(role))
 
-  const login = useCallback((rememberMe = false) => {
-    localStorage.setItem('kc_remember_me', String(rememberMe))
-    keycloak.login({
-      redirectUri: window.location.origin + '/',
-      scope: rememberMe ? 'openid offline_access' : 'openid',
+  const login = useCallback(async (username, password, rememberMe = false) => {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username,
+        password,
+        remember_me: Boolean(rememberMe),
+      }),
+    })
+
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.success || !json?.data?.access_token) {
+      const message = json?.message || (res.status === 401 ? 'Credenciales inválidas' : `Error ${res.status}`)
+      throw new Error(message)
+    }
+
+    applySession(json.data, rememberMe)
+    setupTokenRefresh({
+      onRefreshFailed: () => {
+        clearRefreshToken()
+        useAuthStore.getState().reset()
+      },
     })
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('kc_remember_me')
-    localStorage.removeItem('kc_tokens')
-    sessionStorage.removeItem('kc_session_active')
-    keycloak.logout({ redirectUri: window.location.origin + '/' })
+  const logout = useCallback(async () => {
+    const refreshToken = useAuthStore.getState().refreshToken || getRefreshToken()
+    const accessToken = useAuthStore.getState().token
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
+      })
+    } catch {
+      /* noop — se limpia la sesión local de todos modos */
+    }
+    clearRefreshToken()
+    useAuthStore.getState().reset()
   }, [])
 
-  const getTokenParsed = useCallback(() => keycloak.tokenParsed ?? null, [])
+  const getTokenParsed = useCallback(() => user ?? null, [user])
 
   return {
     isAuthenticated,

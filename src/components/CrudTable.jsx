@@ -6,7 +6,7 @@
  * - Paginación, ordenación por columna
  * - Búsqueda de texto
  * - Export XLSX
- * - Persistencia de preferencias (keycloakPrefs)
+ * - Persistencia de preferencias (userPrefs)
  * - Modal de creación/edición (via onNew / onEdit)
  * - Confirmación de eliminación
  * - Toast notifications
@@ -28,7 +28,7 @@ import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } fr
 import * as XLSX from 'xlsx'
 import { useTranslation } from 'react-i18next'
 import { apiFetch } from '@/utils/apiFetch'
-import * as keycloakPrefs from '@/utils/keycloakPrefs'
+import * as userPrefs from '@/utils/userPrefs'
 import { PER_PAGE_OPTIONS, DEFAULT_PER_PAGE } from '../config/crudTableConfigs'
 import { PREFS_LOAD_FALLBACK_MS, TOAST_DISMISS_MS } from '@/config/defaults'
 import { initVisibility, initColOrder, initSortCriteria, normalizeSortCriteria, appendSortCriteriaParams } from './CrudTable/helpers'
@@ -121,10 +121,10 @@ export default function CrudTable({
   function onTopScroll()   { if (tableWrapRef.current) tableWrapRef.current.scrollLeft = topScrollRef.current.scrollLeft }
   function onTableScroll() { if (topScrollRef.current) topScrollRef.current.scrollLeft = tableWrapRef.current.scrollLeft }
 
-  // ── Cargar prefs desde Keycloak ────────────────────────────────────────────
+  // ── Cargar prefs desde la API ──────────────────────────────────────────────
   useEffect(() => {
     const fallback = setTimeout(() => setPrefsReady(true), PREFS_LOAD_FALLBACK_MS)
-    const unsub = keycloakPrefs.subscribe(storageKey, (p) => {
+    const unsub = userPrefs.subscribe(storageKey, (p) => {
       if (prefsApplied.current) return
       prefs.current = p
       setVisibility(initVisibility(allColumnsProp, p))
@@ -141,14 +141,14 @@ export default function CrudTable({
       clearTimeout(fallback)
       setPrefsReady(true)
     })
-    keycloakPrefs.ensureLoaded(storageKey)
+    userPrefs.ensureLoaded(storageKey)
     return () => { unsub(); clearTimeout(fallback) }
   }, [storageKey, allColumnsProp])
 
   // ── Persistir prefs ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!prefsReady) return
-    keycloakPrefs.setPrefs(storageKey, {
+    userPrefs.setPrefs(storageKey, {
       visibility,
       colOrder,
       colWidths,
