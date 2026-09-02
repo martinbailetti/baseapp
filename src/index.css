@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Dark mode global overrides ──────────────────────────────────────────────
+   html.dark .clase  →  especificidad (0,2,1)  > .clase (0,1,0)
+   Cubre todos los componentes sin tocar cada archivo individualmente.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+html.dark { color-scheme: dark; }
+
+/* Fondos */
+html.dark .bg-white      { background-color: rgb(30  41  59); }   /* slate-800 */
+html.dark .bg-gray-50    { background-color: rgb(15  23  42); }   /* slate-900 */
+html.dark .bg-gray-100   { background-color: rgb(30  41  59); }   /* slate-800 */
+
+/* Texto */
+html.dark .text-gray-900 { color: rgb(241 245 249); }  /* slate-100 */
+html.dark .text-gray-800 { color: rgb(226 232 240); }  /* slate-200 */
+html.dark .text-gray-700 { color: rgb(203 213 225); }  /* slate-300 */
+html.dark .text-gray-600 { color: rgb(148 163 184); }  /* slate-400 */
+html.dark .text-gray-500 { color: rgb(100 116 139); }  /* slate-500 */
+html.dark .text-gray-400 { color: rgb(71  85  105); }  /* slate-600 */
+
+/* Bordes */
+html.dark .border-gray-200 { border-color: rgb(51 65 85); }   /* slate-700 */
+html.dark .border-gray-100 { border-color: rgb(51 65 85); }   /* slate-700 */
+html.dark .border-gray-300 { border-color: rgb(71 85 105); }  /* slate-600 */
+
+/* Separadores (divide-y usa border-color heredado de divide-{color}) */
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(51 65 85); }
+html.dark .divide-y        > :not([hidden]) ~ :not([hidden]) { border-color: rgb(51 65 85); }
+
+/* Hover */
+html.dark .hover\:bg-white:hover    { background-color: rgb(51 65 85); }
+html.dark .hover\:bg-gray-50:hover  { background-color: rgb(51 65 85); }   /* slate-700 */
+html.dark .hover\:bg-gray-100:hover { background-color: rgb(51 65 85); }   /* slate-700 */
+
+/* Filas anuladas */
+html.dark .bg-red-50              { background-color: rgb(127 29 29 / 0.25); }
+html.dark .hover\:bg-red-100:hover { background-color: rgb(127 29 29 / 0.35); }
+
+/* Inputs y selects nativos (sin clase bg explícita) */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: rgb(51 65 85);   /* slate-700 */
+  color: rgb(226 232 240);           /* slate-200 */
+}
+html.dark input:not([type="checkbox"]):not([type="radio"])::placeholder,
+html.dark textarea::placeholder {
+  color: rgb(100 116 139);           /* slate-500 */
+}

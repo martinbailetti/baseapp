@@ -1,0 +1,4 @@
+# NUNCA incluir archivos .htaccess en webapp/public/
+# Estos archivos pertenecen solo a api/ (raíz del backend)
+.htaccess
+.htaccess24
