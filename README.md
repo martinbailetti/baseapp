@@ -135,7 +135,7 @@ tests/
 
 Los roles se leen de `VITE_REQUIRED_ROLES` (separados por coma).
 `hasRequiredRoles` es `true` si el usuario tiene **al menos uno** de los roles listados.
-Los roles se buscan en `user.roles` y en `user.realm_access.roles`.
+Los roles se buscan en `user.roles`.
 
 | Rol | Acceso |
 |-----|--------|

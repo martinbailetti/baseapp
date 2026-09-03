@@ -10,8 +10,7 @@ const REQUIRED_ROLES = import.meta.env.VITE_REQUIRED_ROLES
 
 function rolesFromUser(user) {
   if (!user) return []
-  if (Array.isArray(user.roles)) return user.roles
-  return user.realm_access?.roles ?? []
+  return Array.isArray(user.roles) ? user.roles : []
 }
 
 /**

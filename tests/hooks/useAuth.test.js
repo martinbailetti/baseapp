@@ -12,7 +12,6 @@ vi.mock('@/store/useAuthStore', () => {
       name: 'Test User',
       email: 'test@example.com',
       roles: ['admin'],
-      realm_access: { roles: ['admin'] },
     },
     token: 'mock-token',
     error: null,
