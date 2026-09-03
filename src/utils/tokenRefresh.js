@@ -32,12 +32,20 @@ export async function tryRefreshToken() {
   const refreshToken = useAuthStore.getState().refreshToken || getRefreshToken()
   if (!refreshToken) return false
 
+  const timeoutMs = 8000
+
   try {
-    const res = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
+    const res = await Promise.race([
+      fetch(`${API_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      }),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Refresh timeout')), timeoutMs)
+      }),
+    ])
+
     const json = await res.json().catch(() => null)
     if (!res.ok || !json?.success || !json?.data?.access_token) {
       return false

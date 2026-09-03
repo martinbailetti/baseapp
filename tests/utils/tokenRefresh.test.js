@@ -94,6 +94,15 @@ describe('tokenRefresh', () => {
     await expect(tryRefreshToken()).resolves.toBe(false)
   })
 
+  it('tryRefreshToken devuelve false si el refresh se cuelga', async () => {
+    mockFetch.mockImplementation(() => new Promise(() => {}))
+
+    const promise = tryRefreshToken()
+    await vi.advanceTimersByTimeAsync(8_000)
+
+    await expect(promise).resolves.toBe(false)
+  })
+
   it('ensureFreshToken no refresca si el token sigue vigente', async () => {
     tokenExpiresSoon.mockReturnValue(false)
 

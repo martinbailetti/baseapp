@@ -79,12 +79,6 @@ async function restoreSession() {
   setLoading(false)
 }
 
-restoreSession().catch((err) => {
-  console.error('Auth restore error', err)
-  setError('No se pudo restaurar la sesión.')
-  setLoading(false)
-})
-
 const root = ReactDOM.createRoot(document.getElementById('root'))
 
 let rendered = false
@@ -102,3 +96,11 @@ useAuthStore.subscribe((state) => {
 })
 
 root.render(<LoadingPage />)
+
+// Se llama DESPUÉS de registrar el subscribe para que setLoading(false)
+// llegue al oyente incluso cuando restoreSession no tiene ningún await.
+restoreSession().catch((err) => {
+  console.error('Auth restore error', err)
+  setError('No se pudo restaurar la sesión.')
+  setLoading(false)
+})
